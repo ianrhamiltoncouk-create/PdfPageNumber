@@ -25,7 +25,11 @@ const GUTTER_PRESETS = [
   { value: "0.3", label: "0.3\"" },
   { value: "0.4", label: "0.4\"" },
   { value: "0.5", label: "0.5\"" },
+  { value: "0.6", label: "0.6\"" },
+  { value: "0.7", label: "0.7\"" },
   { value: "0.75", label: "0.75\"" },
+  { value: "0.8", label: "0.8\"" },
+  { value: "0.9", label: "0.9\"" },
   { value: "1.0", label: "1.0\"" },
 ];
 
@@ -42,24 +46,6 @@ export default function PositionControls({
 
   const handlePresetChange = (preset: string) => {
     updateSetting("preset", preset);
-    // Set default gutter values for presets
-    if (preset !== "custom") {
-      // Convert preset to inches then to current units
-      const inchValue = preset === "0.3" ? 0.3 : preset === "0.4" ? 0.4 : preset === "0.5" ? 0.5 : preset === "0.75" ? 0.75 : preset === "1.0" ? 1.0 : 0.25;
-      let gutterValue: number;
-      switch (settings.units) {
-        case "in":
-          gutterValue = inchValue;
-          break;
-        case "mm":
-          gutterValue = inchValue * 25.4;
-          break;
-        default: // pt
-          gutterValue = inchValue * 72;
-          break;
-      }
-      updateSetting("gutterMargin", Math.round(gutterValue * 100) / 100);
-    }
   };
 
   const handleGutterPresetChange = (preset: string) => {
