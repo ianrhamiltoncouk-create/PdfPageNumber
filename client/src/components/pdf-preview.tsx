@@ -32,13 +32,27 @@ export default function PdfPreview({
 
     const renderPage = async () => {
       try {
-        const pdf = await (window as any).pdfjsLib.getDocument({ data: pdfFile.arrayBuffer }).promise;
+        console.log('Rendering page', currentPage, 'with zoom', zoom);
+        
+        // Import PDF.js dynamically
+        const pdfjsLib = await import('pdfjs-dist');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        
+        // Create a fresh copy of the ArrayBuffer to avoid detached buffer issues
+        const arrayBufferCopy = pdfFile.arrayBuffer.slice(0);
+        const pdf = await pdfjsLib.getDocument({ data: arrayBufferCopy }).promise;
         const page = await pdf.getPage(currentPage);
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (!canvas) {
+          console.error('Canvas ref not available');
+          return;
+        }
 
         const context = canvas.getContext("2d");
-        if (!context) return;
+        if (!context) {
+          console.error('Canvas context not available');
+          return;
+        }
 
         const viewport = page.getViewport({ scale: zoom / 100 });
         setPageSize({ width: viewport.width, height: viewport.height });
@@ -50,8 +64,10 @@ export default function PdfPreview({
           canvasContext: context,
           viewport: viewport,
         }).promise;
+        
+        console.log('Page rendered successfully');
       } catch (error) {
-        console.error("Error rendering page:", error);
+        console.error("Error rendering page:", error, error instanceof Error ? error.message : String(error));
       }
     };
 

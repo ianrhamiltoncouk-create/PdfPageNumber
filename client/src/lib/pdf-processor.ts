@@ -13,10 +13,8 @@ export async function processPdf(
   onProgress: (page: number, total: number) => void
 ): Promise<Uint8Array> {
   try {
-    const PDFLib = (window as any).PDFLib;
-    if (!PDFLib) {
-      throw new Error('PDF-lib library not loaded');
-    }
+    // Import pdf-lib dynamically
+    const PDFLib = await import('pdf-lib');
     
     console.log('Loading PDF document...');
     const pdfDoc = await PDFLib.PDFDocument.load(pdfArrayBuffer);

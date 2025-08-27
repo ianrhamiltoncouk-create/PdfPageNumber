@@ -79,8 +79,16 @@ export default function PdfNumberingPage() {
 
   const handleFileUpload = useCallback(async (file: File) => {
     try {
+      console.log('Starting PDF upload...', file.name);
       const arrayBuffer = await file.arrayBuffer();
-      const pdfDoc = await (window as any).pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      
+      // Import PDF.js dynamically
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+      
+      console.log('Loading PDF with PDF.js...');
+      const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      console.log('PDF loaded successfully, pages:', pdfDoc.numPages);
       
       setPdfFile({
         file,
@@ -99,7 +107,7 @@ export default function PdfNumberingPage() {
       console.error("Error loading PDF:", error);
       toast({
         title: "Error loading PDF",
-        description: "Please ensure the file is a valid PDF document.",
+        description: error instanceof Error ? error.message : "Please ensure the file is a valid PDF document.",
         variant: "destructive",
       });
     }
