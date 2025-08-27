@@ -1,0 +1,157 @@
+Build a PDF Page Numbering Web App (with gutter + mirrored gutter)
+
+Create a single-page web app that lets me upload a PDF, configure page-numbering options (including gutter and mirrored gutter), and download a new PDF with numbers added. Do all PDF processing client-side in the browser (no server uploads), using a reliable JS PDF library (e.g., pdf-lib). Use plain HTML/CSS/JS or a lightweight framework; keep it simple and fast.
+
+Core features
+
+Upload
+
+Drag-and-drop or file picker for a single .pdf.
+
+Show file name, page count, and a small preview (first page thumbnail is enough).
+
+Numbering Controls
+
+Start numbering from page: numeric input visibleFromPage (e.g., 7 means pages 1–6 are unnumbered visually but still counted).
+
+Starting number: numeric input startNumber (default 1). The first visible page uses this number; earlier pages are counted but hidden.
+
+Example: If visibleFromPage=7 and startNumber=7, pages 1–6 have no visible numbers, page 7 shows “7”, page 8 shows “8”, etc.
+
+Position presets: dropdown with options:
+
+Bottom-center, Bottom-outer, Bottom-inner, Top-center, Top-outer, Top-inner, Custom (x/y).
+
+Font settings: font family (built-in or embedded), size, opacity.
+
+Units: select pt / mm (internally use points; convert as needed).
+
+Gutter margin (pt/mm): numeric input that shifts the number away from the spine.
+
+Mirrored gutter: checkbox. When ON, apply gutter to inner/outer depending on odd/even page (book layout). When OFF, treat all pages the same.
+
+Page range: checkbox + inputs to optionally limit numbering to a custom inclusive range (e.g., 3–250) while still respecting visibleFromPage logic.
+
+Skip pages pattern (optional): input for comma/range syntax (e.g., 1, 2, 10-12) that hides numbers on those pages but continues counting.
+
+Live Preview
+
+Render a single preview of the current page (selectable page number with next/prev controls).
+
+Overlay the would-be page number text to show position, font size, and gutter effect.
+
+Process & Download
+
+Button: “Add Numbers & Download”.
+
+Create a new PDF with the numbers stamped on the chosen position per page.
+
+Preserve original page size/orientation; do not reflow content.
+
+Filename pattern: originalName_numbered.pdf.
+
+Positioning rules
+
+Coordinate system: use PDF points; origin bottom-left.
+
+Insets: Provide base margins (top/bottom/left/right) so presets are consistent (e.g., 24pt from edge).
+
+Outer vs Inner:
+
+If mirrored gutter = ON:
+
+Odd pages (1-based) are right-hand pages → inner edge is left, outer edge is right.
+
+Even pages are left-hand pages → inner edge is right, outer edge is left.
+
+Apply the gutter offset toward the inner edge for “inner” positions; away from inner toward the outer edge for “outer” positions.
+
+For Bottom-center / Top-center, apply no gutter shift unless a dedicated “center gutter shift” is provided (leave it 0 by default).
+
+Counting logic (important)
+
+Let i be the 1-based physical page index.
+
+Let visibleFromPage = v and startNumber = s.
+
+The displayed number on page i is:
+
+Hidden if i < v or if i matches the skip-pattern or is outside the selected page range.
+
+Otherwise, display = s + (i - v).
+
+The counting always increases with physical page order; hidden pages still “consume” counts implicitly because the formula uses page indices.
+
+UX & UI
+
+Clean layout with a sidebar (controls) and a main panel (preview).
+
+Validate inputs (no negatives; clamp ranges; ensure v ≤ total pages+1).
+
+Disable “Download” until a PDF is loaded.
+
+Show progress indicator during processing (for large PDFs).
+
+Show error toasts for invalid PDFs.
+
+Tech details
+
+Use pdf-lib to:
+
+Load the uploaded PDF.
+
+Embed a font (built-in or a bundled open font like Inter or Roboto; include the font file locally).
+
+Draw text onto each page at computed (x, y) with opacity.
+
+Use PDFDocument.load(arrayBuffer) and page.drawText().
+
+For preview, render a page to canvas using pdfjs-dist or a lightweight approach; the overlay can be done with an absolutely-positioned <canvas>/<div> for the number.
+
+Ensure everything runs completely client-side.
+
+Edge cases to handle
+
+Very large or very small page sizes.
+
+Mixed page sizes (calculate per page).
+
+Landscape pages.
+
+Non-standard page origins (stick to standard PDF points).
+
+Empty or malformed PDFs (show clear error and don’t crash).
+
+File structure (example)
+/index.html
+/style.css
+/app.js
+/lib/pdf-lib.min.js
+/lib/pdf.worker.min.js  (if using pdf.js preview)
+/fonts/Inter-Regular.ttf
+
+Acceptance tests
+
+Upload a 12-page PDF. Set visibleFromPage=7, startNumber=7, position Bottom-outer, gutter 18pt, mirrored ON.
+
+Pages 1–6: no visible number.
+
+Page 7 shows “7” near the outer bottom; Page 8 shows “8” near the outer bottom, mirrored horizontally.
+
+Set position to Bottom-center, mirrored ON, gutter non-zero → center positions do not shift.
+
+Set skip pattern to 1, 2, 10-12 → pages 10–12 have no numbers; earlier logic still holds.
+
+Change units to mm and confirm consistent placement.
+
+Downloaded file opens with numbers at expected places; original content intact.
+
+Nice-to-haves (if quick)
+
+Choose font color and outline toggle (thin stroke) for legibility.
+
+“Nudge” controls for fine X/Y adjustments on presets.
+
+Remember last settings in localStorage.
+
+Deliverables: a working Replit project I can run with “Run” and open a live web preview to test, with clear comments in the code explaining the gutter/mirroring math and the counting logic.
