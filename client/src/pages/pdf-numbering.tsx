@@ -6,7 +6,7 @@ import PositionControls from "@/components/position-controls";
 import FontControls from "@/components/font-controls";
 import PdfPreview from "@/components/pdf-preview";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { FileText, Loader2 } from "lucide-react";
 import { processPdf } from "@/lib/pdf-processor";
@@ -248,6 +248,7 @@ export default function PdfNumberingPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="sr-only">Processing PDF</DialogTitle>
+            <DialogDescription className="sr-only">Adding page numbers to your document</DialogDescription>
           </DialogHeader>
           <div className="text-center p-6">
             <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>

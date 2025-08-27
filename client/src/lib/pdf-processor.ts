@@ -12,77 +12,88 @@ export async function processPdf(
   fontSettings: FontSettings,
   onProgress: (page: number, total: number) => void
 ): Promise<Uint8Array> {
-  const PDFLib = (window as any).PDFLib;
-  const pdfDoc = await PDFLib.PDFDocument.load(pdfArrayBuffer);
-  const pages = pdfDoc.getPages();
-
-  // Embed font
-  let font;
   try {
-    switch (fontSettings.family) {
-      case "helvetica":
-        font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-        break;
-      case "times":
-        font = await pdfDoc.embedFont(PDFLib.StandardFonts.TimesRoman);
-        break;
-      default:
-        font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-        break;
+    const PDFLib = (window as any).PDFLib;
+    if (!PDFLib) {
+      throw new Error('PDF-lib library not loaded');
     }
+    
+    console.log('Loading PDF document...');
+    const pdfDoc = await PDFLib.PDFDocument.load(pdfArrayBuffer);
+    const pages = pdfDoc.getPages();
+    console.log(`PDF loaded with ${pages.length} pages`);
+
+    // Embed font
+    let font;
+    try {
+      switch (fontSettings.family) {
+        case "helvetica":
+          font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+          break;
+        case "times":
+          font = await pdfDoc.embedFont(PDFLib.StandardFonts.TimesRoman);
+          break;
+        default:
+          font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+          break;
+      }
+    } catch (error) {
+      console.error("Error embedding font:", error);
+      font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+    }
+
+    const fontSize = fontSettings.size;
+    const opacity = fontSettings.opacity / 100;
+    const gutterPt = convertToPoints(positionSettings.gutterMargin, positionSettings.units);
+
+    // Parse skip pattern
+    const skipPages = parseSkipPattern(numberingSettings.skipPattern);
+
+    for (let i = 0; i < pages.length; i++) {
+      const pageNum = i + 1;
+      onProgress(pageNum, pages.length);
+
+      // Check if this page should have a number
+      if (!shouldShowNumber(pageNum, numberingSettings, pages.length)) {
+        continue;
+      }
+
+      // Check if this page is in skip pattern
+      if (skipPages.has(pageNum)) {
+        continue;
+      }
+
+      const page = pages[i];
+      const { width, height } = page.getSize();
+      const displayNumber = getDisplayNumber(pageNum, numberingSettings);
+
+      // Calculate position
+      const position = calculateNumberPosition(
+        pageNum,
+        positionSettings,
+        { width, height },
+        gutterPt
+      );
+
+      // Convert hex color to RGB
+      const rgb = hexToRgb(fontSettings.color);
+
+      // Draw the number
+      page.drawText(displayNumber.toString(), {
+        x: position.x,
+        y: position.y,
+        size: fontSize,
+        font: font,
+        color: PDFLib.rgb(rgb.r / 255, rgb.g / 255, rgb.b / 255),
+        opacity: opacity,
+      });
+    }
+
+    return await pdfDoc.save();
   } catch (error) {
-    console.error("Error embedding font:", error);
-    font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+    console.error('Error in processPdf:', error);
+    throw error;
   }
-
-  const fontSize = fontSettings.size;
-  const opacity = fontSettings.opacity / 100;
-  const gutterPt = convertToPoints(positionSettings.gutterMargin, positionSettings.units);
-
-  // Parse skip pattern
-  const skipPages = parseSkipPattern(numberingSettings.skipPattern);
-
-  for (let i = 0; i < pages.length; i++) {
-    const pageNum = i + 1;
-    onProgress(pageNum, pages.length);
-
-    // Check if this page should have a number
-    if (!shouldShowNumber(pageNum, numberingSettings, pages.length)) {
-      continue;
-    }
-
-    // Check if this page is in skip pattern
-    if (skipPages.has(pageNum)) {
-      continue;
-    }
-
-    const page = pages[i];
-    const { width, height } = page.getSize();
-    const displayNumber = getDisplayNumber(pageNum, numberingSettings);
-
-    // Calculate position
-    const position = calculateNumberPosition(
-      pageNum,
-      positionSettings,
-      { width, height },
-      gutterPt
-    );
-
-    // Convert hex color to RGB
-    const rgb = hexToRgb(fontSettings.color);
-
-    // Draw the number
-    page.drawText(displayNumber.toString(), {
-      x: position.x,
-      y: position.y,
-      size: fontSize,
-      font: font,
-      color: PDFLib.rgb(rgb.r / 255, rgb.g / 255, rgb.b / 255),
-      opacity: opacity,
-    });
-  }
-
-  return await pdfDoc.save();
 }
 
 /**
