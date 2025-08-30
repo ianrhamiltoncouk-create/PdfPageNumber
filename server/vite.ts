@@ -52,7 +52,7 @@ export async function setupVite(app: Express, server: Server) {
         "index.html",
       );
 
-      // always reload the index.html file from disk incase it changes
+      // always reload the index.html file from disk in case it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
@@ -68,17 +68,19 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  // ✅ FIX: point to client/dist where vite build outputs
+  const distPath = path.resolve(import.meta.dirname, "..", "client", "dist");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+      `Could not find the build directory: ${distPath}, make sure to run "vite build" first`,
     );
   }
 
+  // Serve built assets
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
+  // Fallback to index.html for client-side routing
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
