@@ -2,8 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
-import type { PdfFile, NumberingSettings, PositionSettings, FontSettings } from "@/pages/pdf-numbering";
-import { calculateNumberPosition, shouldShowNumber, getDisplayNumber } from "@/lib/pdf-processor";
+import type {
+  PdfFile,
+  NumberingSettings,
+  PositionSettings,
+  FontSettings,
+} from "@/pages/pdf-numbering";
+import {
+  calculateNumberPosition,
+  shouldShowNumber,
+  getDisplayNumber,
+} from "@/lib/pdf-processor";
 import { convertToPoints } from "@/lib/unit-converter";
 
 interface PdfPreviewProps {
@@ -30,16 +39,23 @@ export default function PdfPreview({
   useEffect(() => {
     if (!pdfFile) return;
 
+    let cancelled = false;
+
     const renderPage = async () => {
       try {
-        const { getDocument } = await import("pdfjs-dist"); // bundled by Vite
+        // ✅ Use legacy build for best compatibility in bundles
+        const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
         const arrayBufferCopy = pdfFile.arrayBuffer.slice(0);
         const pdf = await getDocument({ data: arrayBufferCopy }).promise;
+        if (cancelled) return;
+
         const page = await pdf.getPage(currentPage);
+        if (cancelled) return;
 
         const canvas = canvasRef.current;
         if (!canvas) return;
+
         const context = canvas.getContext("2d");
         if (!context) return;
 
@@ -56,6 +72,10 @@ export default function PdfPreview({
     };
 
     renderPage();
+
+    return () => {
+      cancelled = true;
+    };
   }, [pdfFile, currentPage, zoom]);
 
   const handlePrevPage = () => currentPage > 1 && onPageChange(currentPage - 1);
@@ -185,7 +205,8 @@ export default function PdfPreview({
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${showNumber ? "bg-green-500" : "bg-red-500"}`} />
                 <span>
-                  Page {currentPage} • {showNumber ? "Number visible" : "Number hidden"} • Gutter: {positionSettings.gutterMargin}{positionSettings.units}
+                  Page {currentPage} • {showNumber ? "Number visible" : "Number hidden"} • Gutter: {positionSettings.gutterMargin}
+                  {positionSettings.units}
                 </span>
               </div>
             </div>
