@@ -1,6 +1,6 @@
+// client/src/pdfWorker.ts
 import { GlobalWorkerOptions } from 'pdfjs-dist';
-import PdfJsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker';
+import PdfJsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs?worker';
 
-// Wire the worker Vite bundles to PDF.js
+// Wire the worker bundled by Vite (legacy build = safest in browsers)
 GlobalWorkerOptions.workerPort = new PdfJsWorker();
-
