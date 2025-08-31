@@ -1,4 +1,4 @@
-import './pdfWorker'; // MUST be first
+import './pdfWorker'; // must be first
 
 import { createRoot } from "react-dom/client";
 import App from "./App";
