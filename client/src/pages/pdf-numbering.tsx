@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } f
 import { Progress } from "@/components/ui/progress";
 import { FileText, Loader2 } from "lucide-react";
 import { processPdf } from "@/lib/pdf-processor";
+import { stampPdfClientSide } from "@/lib/stamp-client";
 
 export interface PdfFile {
   file: File;
@@ -79,15 +80,12 @@ export default function PdfNumberingPage() {
 
   const handleFileUpload = useCallback(async (file: File) => {
     try {
-      console.log("Starting PDF upload...", file.name);
       const arrayBuffer = await file.arrayBuffer();
 
-      // ✅ Import PDF.js by package name; worker is wired in client/src/pdfWorker.ts
-      const { getDocument } = await import("pdfjs-dist");
+      // ✅ Use the legacy build; worker is wired in client/src/pdfWorker.ts
+      const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
-      console.log("Loading PDF with PDF.js...");
       const pdfDoc = await getDocument({ data: arrayBuffer }).promise;
-      console.log("PDF loaded successfully, pages:", pdfDoc.numPages);
 
       setPdfFile({
         file,
@@ -128,30 +126,57 @@ export default function PdfNumberingPage() {
         setProcessingProgress((page / total) * 100);
       };
 
-      // ✅ Client-side processing (no server upload)
-      const processedPdf = await processPdf(
-        pdfFile.arrayBuffer,
-        numberingSettings,
-        positionSettings,
-        fontSettings,
-        progressCallback
-      );
+      let processedBytes: Uint8Array | ArrayBuffer;
 
-      // Download the processed PDF
-      const blob = new Blob([processedPdf], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${pdfFile.file.name.replace(/\.pdf$/i, "")}_numbered.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      try {
+        // Try your existing client-side processor first (keeps your progress UI)
+        processedBytes = await processPdf(
+          pdfFile.arrayBuffer,
+          numberingSettings,
+          positionSettings,
+          fontSettings,
+          progressCallback
+        );
 
-      toast({
-        title: "PDF processed successfully!",
-        description: "Your numbered PDF has been downloaded.",
-      });
+        const blob = new Blob([processedBytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${pdfFile.file.name.replace(/\.pdf$/i, "")}_numbered.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        toast({
+          title: "PDF processed successfully!",
+          description: "Your numbered PDF has been downloaded.",
+        });
+      } catch (e) {
+        console.warn("processPdf failed; falling back to stampPdfClientSide()", e);
+
+        // Fallback: do stamping directly via pdf-lib on the client
+        const blob = await stampPdfClientSide(
+          pdfFile.file,
+          numberingSettings,
+          positionSettings,
+          fontSettings
+        );
+
+        const fallbackUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = fallbackUrl;
+        a.download = `${pdfFile.file.name.replace(/\.pdf$/i, "")}_numbered.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(fallbackUrl);
+
+        toast({
+          title: "PDF processed",
+          description: "Downloaded using the client fallback.",
+        });
+      }
     } catch (error) {
       console.error("Error processing PDF:", error);
       toast({
