@@ -79,26 +79,25 @@ export default function PdfNumberingPage() {
 
   const handleFileUpload = useCallback(async (file: File) => {
     try {
-      console.log('Starting PDF upload...', file.name);
+      console.log("Starting PDF upload...", file.name);
       const arrayBuffer = await file.arrayBuffer();
-      
-      // Import PDF.js dynamically
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-      
-      console.log('Loading PDF with PDF.js...');
-      const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      console.log('PDF loaded successfully, pages:', pdfDoc.numPages);
-      
+
+      // ✅ Import PDF.js by package name; worker is wired in client/src/pdfWorker.ts
+      const { getDocument } = await import("pdfjs-dist");
+
+      console.log("Loading PDF with PDF.js...");
+      const pdfDoc = await getDocument({ data: arrayBuffer }).promise;
+      console.log("PDF loaded successfully, pages:", pdfDoc.numPages);
+
       setPdfFile({
         file,
         pageCount: pdfDoc.numPages,
         arrayBuffer,
       });
-      
+
       setCurrentPage(1);
-      setNumberingSettings(prev => ({ ...prev, rangeTo: pdfDoc.numPages }));
-      
+      setNumberingSettings((prev) => ({ ...prev, rangeTo: pdfDoc.numPages }));
+
       toast({
         title: "PDF loaded successfully",
         description: `${file.name} • ${pdfDoc.numPages} pages`,
@@ -107,7 +106,10 @@ export default function PdfNumberingPage() {
       console.error("Error loading PDF:", error);
       toast({
         title: "Error loading PDF",
-        description: error instanceof Error ? error.message : "Please ensure the file is a valid PDF document.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please ensure the file is a valid PDF document.",
         variant: "destructive",
       });
     }
@@ -126,6 +128,7 @@ export default function PdfNumberingPage() {
         setProcessingProgress((page / total) * 100);
       };
 
+      // ✅ Client-side processing (no server upload)
       const processedPdf = await processPdf(
         pdfFile.arrayBuffer,
         numberingSettings,
@@ -139,7 +142,7 @@ export default function PdfNumberingPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${pdfFile.file.name.replace(".pdf", "")}_numbered.pdf`;
+      link.download = `${pdfFile.file.name.replace(/\.pdf$/i, "")}_numbered.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -256,7 +259,9 @@ export default function PdfNumberingPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="sr-only">Processing PDF</DialogTitle>
-            <DialogDescription className="sr-only">Adding page numbers to your document</DialogDescription>
+            <DialogDescription className="sr-only">
+              Adding page numbers to your document
+            </DialogDescription>
           </DialogHeader>
           <div className="text-center p-6">
             <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
